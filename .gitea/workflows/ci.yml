@@ -1,0 +1,61 @@
+name: CI
+
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: crm-ci-${{ gitea.run_id }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Prepare .env file
+        run: cp .env.example .env
+      
+      - name: Build app
+        run: docker compose -f docker-compose.ci.yml build app
+      
+      - name: Start Database
+        run: docker compose -f docker-compose.ci.yml up -d db
+      
+      - name: Run tests
+        run: docker compose -f docker-compose.ci.yml run --rm app pytest
+      
+      - name: Stop containers
+        if: always()
+        run: docker compose -f docker-compose.ci.yml down -v
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-test
+    env:
+      COMPOSE_PROJECT_NAME: crm-precommit-${{ gitea.run_id }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Prepare .env file
+        run: cp .env.example .env
+
+      - name: Build app
+        run: docker compose -f docker-compose.ci.yml build app
+
+      - name: Run ruff check
+        run: docker compose -f docker-compose.ci.yml run --rm --no-deps app ruff check .
+
+      - name: Run ruff format check
+        run: docker compose -f docker-compose.ci.yml run --rm --no-deps app ruff format --check .
+
+      - name: Run mypy
+        run: docker compose -f docker-compose.ci.yml run --rm --no-deps app mypy
