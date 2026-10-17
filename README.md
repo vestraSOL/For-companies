@@ -50,7 +50,7 @@ python-backend/
 1. Скопировать env-файл и при необходимости поправить подключение к PostgreSQL:
 
 ```bash
-cp .env.example .env
+cp .env .env
 ```
 
 2. Полный запуск приложения на Python 3.14 и PostgreSQL 18:
